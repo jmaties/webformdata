@@ -1,7 +1,7 @@
 webformdata
 ===========
 
-Evitar emails duplicados en envios anónimos a un webform 
+Evitar emails duplicados en envios anónimos a un webform de Drupal
 
 Como extra, validación de DNI (España)
 
