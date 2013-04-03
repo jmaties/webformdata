@@ -1,0 +1,117 @@
+<?php
+
+/**
+*
+ * @author Javier Maties - Geekia
+ * @since 21-01-2013
+ * @version 1.0
+ * @license <a href="http://opensource.org/licenses/gpl-license.php" rel="nofollow">http://opensource.org/licenses/gpl-license.php</a> GNU Public License
+ * @link <a href="http://www.geekia.es" rel="nofollow">http://www.geekia.es</a>
+ **/
+
+
+/* Validacion Datos */
+
+function webformdata_webform_validator_alter(&$validators) {
+  $end = array(
+    'dato_unico' => array(
+      'name' => "Dato Único",
+      'component_types' => array(
+        'email',
+        'textfield',
+      ),
+      'description' => t('Check that the data is only'),
+      ),
+
+    'validadni' => array(
+      'name' => "Valida DNI",
+      'component_types' => array(
+        'textfield',
+        'hidden',
+      ),
+      'description' => t('Validate DNI'),
+      ),
+
+    );
+  $validators = array_merge($validators, $end);
+}
+
+
+
+/**
+ * Implementation of hook_webform_validation_validate().
+ */
+function webformdata_webform_validation_validate($validator_name, $items, $components, $rule) {
+
+  if ($items) {
+    $errors = array();
+    switch ($validator_name) {
+      
+      case 'validadni':
+
+        foreach ($items as $key => $val) {
+          $salida = valida_dni($val);
+        }
+        //dsm($salida);
+        if ($salida == 0) {
+          $errors[$key] = 'DNI NO VALIDO';
+        }
+
+        return $errors;
+        break;
+
+      case 'dato_unico':
+        foreach ($items as $key => $val) {
+          $dato = $val;
+        }
+
+        $id_webform = $rule['nid'];
+        $valores = array_values($rule['components']);
+        $cid = $valores[0]['cid'];
+
+        if (count(_existedato($dato, $id_webform, $cid))>0)
+          $errors[$key] = 'El dato ya está dado de alta';
+        
+        return $errors;
+
+        break;
+    }
+  }
+}
+
+/* Comprueba en el webform enviados que exite el dato */
+
+function _existedato($dato, $idform, $pos) {
+        
+            $result = db_select('webform_submitted_data', 'u')
+                    ->fields('u', array('sid', 'data'))
+                    ->condition('nid', $idform, ' = ')
+                    ->condition('cid', $pos, ' = ')
+                    ->condition('data', $dato, ' = ')
+                    ->execute()
+                    ->fetchAll();
+        return $result;
+    }
+
+/* Funcion extra para validar el DNI */
+
+function valida_dni($dni) { // retorna false(0) si hay errror o el DNI validado y con letra si no hay error
+  $str = trim($dni);
+  $str = str_replace("-", "", $str);
+  $str = str_ireplace(" ", "", $str);
+  $n = substr($str, 0, strlen($str) - 1);
+  $n = intval($n);
+  if (!is_int($n)) {
+    return 0;
+  }
+  $l = substr($str, -1);
+  if (!is_string($l)) {
+    return 0;
+  }
+  $letra = substr("TRWAGMYFPDXBNJZSQVHLCKE", $n % 23, 1);
+  if (strtolower($l) == strtolower($letra)) {
+    return $n . $l;
+  } else {
+    return 0;
+  }
+}
